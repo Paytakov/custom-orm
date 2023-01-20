@@ -1,12 +1,22 @@
 package entities;
 
+import annotation.Column;
+import annotation.Entity;
+import annotation.Id;
+
 import java.time.LocalDate;
 
+@Entity(name = "users")
 public class User {
 
+    @Id
+    @Column(name = "id")
     private long id;
+    @Column(name = "username")
     private String username;
+    @Column(name = "age")
     private int age;
+    @Column(name = "registration_date")
     private LocalDate registrationDate;
 
     public User(String username,
