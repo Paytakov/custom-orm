@@ -18,6 +18,8 @@ public class User {
     private int age;
     @Column(name = "registration_date")
     private LocalDate registrationDate;
+    @Column(name = "last_logged_in")
+    private LocalDate lastLoggedIn;
 
     public User(String username,
                 int age,
@@ -25,6 +27,7 @@ public class User {
         this.username = username;
         this.age = age;
         this.registrationDate = registrationDate;
+        this.lastLoggedIn = LocalDate.now();
     }
 
     public long getId() {
@@ -60,6 +63,15 @@ public class User {
 
     public User setRegistrationDate(LocalDate registrationDate) {
         this.registrationDate = registrationDate;
+        return this;
+    }
+
+    public LocalDate getLastLoggedIn() {
+        return lastLoggedIn;
+    }
+
+    public User setLastLoggedIn(LocalDate lastLoggedIn) {
+        this.lastLoggedIn = lastLoggedIn;
         return this;
     }
 }

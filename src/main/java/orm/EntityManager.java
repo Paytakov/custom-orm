@@ -6,12 +6,15 @@ import annotation.Id;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class EntityManager<E> implements DBContext<E> {
@@ -32,6 +35,18 @@ public class EntityManager<E> implements DBContext<E> {
 
         PreparedStatement preparedStatement =
                 connection.prepareStatement(createQuery);
+        preparedStatement.execute();
+    }
+
+    public void doAlter(Class<E> entityClass) throws SQLException {
+        String tableName = getTableName(entityClass);
+        String addColumnStatements = getAddColumnStatementsForNewFields(entityClass);
+
+        String alterQuery = String.format("ALTER TABLE %s %s",
+                tableName, addColumnStatements);
+
+        PreparedStatement preparedStatement =
+                connection.prepareStatement(alterQuery);
         preparedStatement.execute();
     }
 
@@ -131,6 +146,45 @@ public class EntityManager<E> implements DBContext<E> {
         );
 
         return connection.prepareStatement(insertQuery).execute();
+    }
+
+    private String getAddColumnStatementsForNewFields(Class<E> entityClass) throws SQLException {
+        Set<String> sqlColumns = getSQLColumnNames(entityClass);
+        List<Field> fields = Arrays.stream(entityClass.getDeclaredFields())
+                .filter(field -> !field.isAnnotationPresent(Id.class))
+                .filter(field -> field.isAnnotationPresent(Column.class))
+                .toList();
+
+        List<String> allAddStatements = new ArrayList<>();
+        for (Field field : fields) {
+            String fieldName = field.getAnnotationsByType(Column.class)[0].name();
+            String sqlType = getSQLType(field.getType());
+
+            if (!sqlColumns.contains(fieldName)) {
+                String statement = String.format("ADD COLUMN %s %s", fieldName, sqlType);
+                allAddStatements.add(statement);
+            }
+        }
+
+        return String.join(",", allAddStatements);
+    }
+
+    private Set<String> getSQLColumnNames(Class<E> entityClass) throws SQLException {
+        String schemaQuery = "SELECT COLUMN_NAME FROM information_schema.`COLUMNS` c" +
+                " WHERE c.TABLE_SCHEMA = 'custom-orm'" +
+                " AND COLUMN_NAME != '%s'" +
+                " AND TABLE_NAME = '%s';";
+
+        PreparedStatement statement = connection.prepareStatement(schemaQuery);
+        ResultSet resultSet = statement.executeQuery();
+
+        Set<String> result = new HashSet<>();
+        while (resultSet.next()) {
+            String columnName = resultSet.getString("COLUMN_NAME");
+            result.add(columnName);
+        }
+
+        return result;
     }
 
     private String getColumnValuesWithoutId(E entity) throws IllegalAccessException {
