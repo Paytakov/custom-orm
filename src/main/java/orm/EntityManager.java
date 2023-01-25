@@ -3,6 +3,7 @@ package orm;
 import annotation.Column;
 import annotation.Entity;
 import annotation.Id;
+
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -43,7 +44,8 @@ public class EntityManager<E> implements DBContext<E> {
         String addColumnStatements = getAddColumnStatementsForNewFields(entityClass);
 
         String alterQuery = String.format("ALTER TABLE %s %s",
-                tableName, addColumnStatements);
+                tableName,
+                addColumnStatements);
 
         PreparedStatement preparedStatement =
                 connection.prepareStatement(alterQuery);
@@ -57,10 +59,10 @@ public class EntityManager<E> implements DBContext<E> {
         Object idValue = primaryKey.get(entity);
 
         if (idValue == null || (long) idValue <= 0) {
-            return doInsert(entity, primaryKey);
+            return doInsert(entity);
         }
 
-        return doUpdate(entity, primaryKey);
+        return doUpdate(entity, (long) idValue);
     }
 
     @Override
@@ -129,20 +131,36 @@ public class EntityManager<E> implements DBContext<E> {
         return type;
     }
 
-    private boolean doUpdate(E entity, Field primaryKey) {
-        return false;
+    private boolean doUpdate(E entity, long idValue) throws IllegalAccessException, SQLException {
+        String tableName = getTableName(entity.getClass());
+        List<String> tableFields = getColumnsWithoutId(entity.getClass());// username, age, reg_date,
+        List<String> columnValues = getColumnValuesWithoutId(entity);
+
+
+        List<String> setStatements = new ArrayList<>();
+        for (int i = 0; i < tableFields.size(); i++) {
+            String statement = tableFields.get(i) + " = " + columnValues.get(i);
+
+            setStatements.add(statement);
+        }
+        String updateQuery = String.format("UPDATE %s SET %s WHERE id = %d",
+                tableName,
+                String.join(",", setStatements),
+                idValue);
+
+        return connection.prepareStatement(updateQuery).execute();
     }
 
-    private boolean doInsert(E entity, Field primaryKey) throws IllegalAccessException, SQLException {
+    private boolean doInsert(E entity) throws IllegalAccessException, SQLException {
         String tableName = getTableName(entity.getClass());
-        String tableFields = getColumnsWithoutId(entity.getClass());
-        String columnValues = getColumnValuesWithoutId(entity);
+        List<String> tableFields = getColumnsWithoutId(entity.getClass());// username, age, reg_date,
+        List<String> columnValues = getColumnValuesWithoutId(entity);
 
         String insertQuery = String.format(
                 "INSERT INTO %s (%s) VALUES (%s)",
                 tableName,
-                tableFields,
-                columnValues
+                String.join(",", tableFields),
+                String.join(",", columnValues)
         );
 
         return connection.prepareStatement(insertQuery).execute();
@@ -187,7 +205,7 @@ public class EntityManager<E> implements DBContext<E> {
         return result;
     }
 
-    private String getColumnValuesWithoutId(E entity) throws IllegalAccessException {
+    private List<String> getColumnValuesWithoutId(E entity) throws IllegalAccessException {
         Class<?> aClass = entity.getClass();
         List<Field> fields = Arrays.stream(aClass.getDeclaredFields())
                 .filter(f -> !f.isAnnotationPresent(Id.class))
@@ -207,15 +225,15 @@ public class EntityManager<E> implements DBContext<E> {
             }
         }
 
-        return String.join(",", values);
+        return values;
     }
 
-    private String getColumnsWithoutId(Class<?> aClass) {
+    private List<String> getColumnsWithoutId(Class<?> aClass) {
         return Arrays.stream(aClass.getDeclaredFields())
                 .filter(f -> !f.isAnnotationPresent(Id.class))
                 .filter(f -> f.isAnnotationPresent(Column.class))
                 .map(f -> f.getAnnotationsByType(Column.class))
                 .map(a -> a[0].name())
-                .collect(Collectors.joining(","));
+                .toList();
     }
 }

@@ -16,9 +16,11 @@ public class Main {
         EntityManager<User> entityManager = new EntityManager<>(connection);
 
         User user = new User("Pesho", 24, LocalDate.now());
+        user.setId(2);
+        user.setUsername("Pecata");
 
 //        entityManager.doCreate(User.class);
-        entityManager.doAlter(User.class);
+     //   entityManager.doAlter(User.class);
         entityManager.persist(user);
     }
 }
