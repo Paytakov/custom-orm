@@ -5,6 +5,7 @@ import annotation.Entity;
 import annotation.Id;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -81,8 +82,52 @@ public class EntityManager<E> implements DBContext<E> {
     }
 
     @Override
-    public E findFirst(Class<E> table, String where) {
-        return null;
+    public E findFirst(Class<E> table, String where) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        String tableName = getTableName(table);
+
+        String selectQuery = String.format("SELECT * FROM %s %s LIMIT1",
+                tableName, where != null ? "WHERE " + where : "");
+
+        PreparedStatement statement = connection.prepareStatement(selectQuery);
+        ResultSet resultSet = statement.executeQuery();
+
+        resultSet.next();
+
+        E result = table.getDeclaredConstructor().newInstance();
+        fillEntity(table, resultSet, result);
+
+        return result;
+    }
+
+    private void fillEntity(Class<E> table, ResultSet resultSet, E entity) throws SQLException, IllegalAccessException {
+        Field[] declaredFields = table.getDeclaredFields();
+        for (Field field : declaredFields) {
+            field.setAccessible(true);
+            fillField(field, resultSet, entity);
+        }
+    }
+
+    private void fillField(Field field, ResultSet resultSet, E entity) throws SQLException, IllegalAccessException {
+        Class<?> fieldType = field.getType();
+        String fieldName = field.getAnnotationsByType(Column.class)[0].name();
+
+        if (fieldType == int.class || fieldType == Integer.class) {
+            int value = resultSet.getInt(fieldName);
+
+            field.set(entity, value);
+        } else if (fieldType == long.class || fieldType == Long.class) {
+            long value = resultSet.getLong(fieldName);
+
+            field.set(entity, value);
+        } else if (fieldType == LocalDate.class) {
+            LocalDate value = LocalDate.parse(resultSet.getString(fieldName));
+
+            field.set(entity, value);
+        } else {
+            String value = resultSet.getString(fieldName);
+
+            field.set(entity, value);
+        }
     }
 
     private Field getIdColumn(Class<?> entity) {

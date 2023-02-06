@@ -21,6 +21,9 @@ public class User {
     @Column(name = "last_logged_in")
     private LocalDate lastLoggedIn;
 
+    public User() {
+    }
+
     public User(String username,
                 int age,
                 LocalDate registrationDate) {
@@ -73,5 +76,16 @@ public class User {
     public User setLastLoggedIn(LocalDate lastLoggedIn) {
         this.lastLoggedIn = lastLoggedIn;
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", username='" + username + '\'' +
+                ", age=" + age +
+                ", registrationDate=" + registrationDate +
+                ", lastLoggedIn=" + lastLoggedIn +
+                '}';
     }
 }

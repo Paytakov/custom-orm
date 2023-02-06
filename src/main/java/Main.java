@@ -1,5 +1,7 @@
 import entities.User;
 import orm.EntityManager;
+
+import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -9,7 +11,7 @@ import static orm.MyConnector.getConnection;
 
 public class Main {
 
-    public static void main(String[] args) throws SQLException, IllegalAccessException {
+    public static void main(String[] args) throws SQLException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
         createConnection("root", "", "mini-orm");
         Connection connection = getConnection();
 
@@ -22,5 +24,7 @@ public class Main {
 //        entityManager.doCreate(User.class);
      //   entityManager.doAlter(User.class);
         entityManager.persist(user);
+
+        entityManager.findFirst(User.class, "id = 2");
     }
 }
