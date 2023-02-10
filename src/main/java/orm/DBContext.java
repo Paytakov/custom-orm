@@ -2,13 +2,12 @@ package orm;
 
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
-import java.util.Iterator;
 
 public interface DBContext<E> {
 
     boolean persist(E entity) throws IllegalAccessException, SQLException;
-    Iterator<E> find(Class<E> table);
-    Iterator<E> find(Class<E> table, String where);
-    E findFirst(Class<E> table);
+    Iterable<E> find(Class<E> table) throws SQLException, InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException;
+    Iterable<E> find(Class<E> table, String where) throws SQLException, IllegalAccessException, NoSuchMethodException, InvocationTargetException, InstantiationException;
+    E findFirst(Class<E> table) throws SQLException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException;
     E findFirst(Class<E> table, String where) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException;
 }

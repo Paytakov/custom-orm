@@ -14,7 +14,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -67,18 +66,34 @@ public class EntityManager<E> implements DBContext<E> {
     }
 
     @Override
-    public Iterator<E> find(Class<E> table) {
-        return null;
+    public Iterable<E> find(Class<E> table) throws SQLException, InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
+        return find(table, null);
     }
 
     @Override
-    public Iterator<E> find(Class<E> table, String where) {
-        return null;
+    public Iterable<E> find(Class<E> table, String where) throws SQLException, IllegalAccessException, NoSuchMethodException, InvocationTargetException, InstantiationException {
+        String tableName = getTableName(table);
+
+        String selectQuery = String.format("SELECT * FROM %s %s",
+                tableName, where != null ? "WHERE " + where : "");
+
+        PreparedStatement statement = connection.prepareStatement(selectQuery);
+        ResultSet resultSet = statement.executeQuery();
+
+        List<E> result = new ArrayList<>();
+        while (resultSet.next()) {
+            E entity = table.getDeclaredConstructor().newInstance();
+            fillEntity(table, resultSet, entity);
+
+            result.add(entity);
+        }
+
+        return result;
     }
 
     @Override
-    public E findFirst(Class<E> table) {
-        return null;
+    public E findFirst(Class<E> table) throws SQLException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+        return findFirst(table, null);
     }
 
     @Override
