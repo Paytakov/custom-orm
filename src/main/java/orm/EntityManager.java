@@ -3,7 +3,6 @@ package orm;
 import annotation.Column;
 import annotation.Entity;
 import annotation.Id;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
@@ -112,6 +111,25 @@ public class EntityManager<E> implements DBContext<E> {
         fillEntity(table, resultSet, result);
 
         return result;
+    }
+
+    @Override
+    public boolean delete(E toDelete) throws IllegalAccessException, SQLException {
+        String tableName = getTableName(toDelete.getClass());
+        Field idColumn = getIdColumn(toDelete.getClass());
+
+        String idColumnName = idColumn.getAnnotationsByType(Column.class)[0].name();
+
+        idColumn.setAccessible(true);
+        Object idColumnValue = idColumn.get(toDelete);
+
+        String query = String.format(
+                "DELETE FROM %s WHERE %s = %s",
+                tableName, idColumnName, idColumnValue
+        );
+
+        PreparedStatement statement = connection.prepareStatement(query);
+        return statement.execute();
     }
 
     private void fillEntity(Class<E> table, ResultSet resultSet, E entity) throws SQLException, IllegalAccessException {
